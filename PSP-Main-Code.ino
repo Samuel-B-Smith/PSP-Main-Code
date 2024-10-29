@@ -21,12 +21,13 @@
 
 #define EEPROM1_ADDRESS 0x50 // First EEPROM
 #define EEPROM2_ADDRESS 0x51 // Second EEPROM
-#define EEPROM_SIZE 65536    // 64KB = 65536 bytes
+#define EEPROM_SIZE 65533    // 64KB = 65536 bytes shortened to prevent overwrite of log
 #define DATA_SIZE 2          // Number of analog inputs
 #define READ_INTERVAL 240    // 0.24 seconds (reduced to prevent drift from write delay)
 
 int currentAddress = 0; // Current address for both EEPROMs
-int logAddress = 65535;
+int logAddress = 65534; //location where data will be logged
+int counter = 0;
 
 void setup() {
     Serial.begin(115200);
@@ -41,7 +42,16 @@ void loop() {
     for (int i = 0; i < DATA_SIZE; i++) {
         data1[i] = analogRead(A0 + i); //Log A0 and A1
         data2[i] = analogRead(A2 + i); //Log A2 and A3
+
+        //Verify data is within acceptable ranges
+        if (data1[i] < 0) data1[i] = 0;
+        if (data1[i] > 1023) data1[i] = 1023;
+        if (data2[i] < 0) data2[i] = 0;
+        if (data2[i] > 1023) data2[i] = 1023;
     }
+
+
+
 
     // Write data to EEPROM
     if (currentAddress < EEPROM_SIZE) {
@@ -58,14 +68,20 @@ void loop() {
 
     // Delay for 0.24 seconds
     delay(READ_INTERVAL);
+
+    //iterate counter and reset at 63
+    counter = (counter + 1) % 64;
+    //Move to next address
+    currentAddress = currentAddress + 4;
 }
 
-void writeEEPROM(int eepromAddress, int address, byte* data) {
+void writeEEPROM(byte eepromAddress, unsigned int currentAddress, byte* data) {
     Wire.beginTransmission(eepromAddress);
-    Wire.write((int)(address >> 8));   // Send high byte
-    Wire.write((int)(address & 0xFF)); // Send low byte
+    Wire.write((int)(currentAddress >> 8));   // Send high byte
+    Wire.write((int)(currentAddress & 0xFF)); // Send low byte
     for (int i = 0; i < DATA_SIZE; i++) {
-        Wire.write(data[i]);            // Send each byte of data
+      Wire.write((int)(data[i] >> 8));   // Send high byte of data
+      Wire.write((int)(data[i] & 0xFF)); // Send low byte of data
     }
     Wire.endTransmission();
     delay(5); // Wait for EEPROM to write
@@ -75,7 +91,7 @@ void writeBackup(int eepromAddress, int address, int logAddress) {
     Wire.beginTransmission(eepromAddress);
     Wire.write((int)(logAddress >> 8));   // Send high byte
     Wire.write((int)(logAddress & 0xFF)); // Send low byte
-    
+
     //Sending Last used address
     Wire.write((int)(address >> 8));   // Send high byte
     Wire.write((int)(address & 0xFF)); // Send low byte
