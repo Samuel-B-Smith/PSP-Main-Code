@@ -48,6 +48,10 @@ void loop() {
         if (data1[i] > 1023) data1[i] = 1023;
         if (data2[i] < 0) data2[i] = 0;
         if (data2[i] > 1023) data2[i] = 1023;
+
+      //Adding last 6 bits as a counter
+      data1[i] = (data1[i] & 0x3FF) | ((counter & 0x3F) << 10);
+      data2[i] = (data2[i] & 0x3FF) | ((counter & 0x3F) << 10);
     }
 
 
