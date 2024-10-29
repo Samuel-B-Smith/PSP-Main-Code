@@ -23,7 +23,7 @@
 #define EEPROM2_ADDRESS 0x51 // Second EEPROM
 #define EEPROM_SIZE 65533    // 64KB = 65536 bytes shortened to prevent overwrite of log
 #define DATA_SIZE 2          // Number of analog inputs
-#define READ_INTERVAL 240    // 0.24 seconds (reduced to prevent drift from write delay)
+#define READ_INTERVAL 235    // 0.235 seconds (reduced to prevent drift from write delay)
 
 int currentAddress = 0; // Current address for both EEPROMs
 int logAddress = 65534; //location where data will be logged
@@ -37,8 +37,8 @@ void setup() {
 
 void loop() {
     // Read analog values from A0, A1, A2, A3
-    byte data1[DATA_SIZE];
-    byte data2[DATA_SIZE];
+    unsigned int data1[DATA_SIZE];
+    unsigned int data2[DATA_SIZE];
     for (int i = 0; i < DATA_SIZE; i++) {
         data1[i] = analogRead(A0 + i); //Log A0 and A1
         data2[i] = analogRead(A2 + i); //Log A2 and A3
@@ -70,23 +70,25 @@ void loop() {
         while (true); // Stop further execution
     }
 
-    // Delay for 0.24 seconds
+    // Delay for 0.235 seconds
     delay(READ_INTERVAL);
 
     //iterate counter and reset at 63
     counter = (counter + 1) % 64;
     //Move to next address
-    currentAddress = currentAddress + 4;
+    currentAddress += 4;
 }
 
-void writeEEPROM(byte eepromAddress, unsigned int currentAddress, byte* data) {
+void writeEEPROM(byte eepromAddress, unsigned int currentAddress, unsigned int* data) {
     Wire.beginTransmission(eepromAddress);
     Wire.write((int)(currentAddress >> 8));   // Send high byte
     Wire.write((int)(currentAddress & 0xFF)); // Send low byte
+
     for (int i = 0; i < DATA_SIZE; i++) {
       Wire.write((int)(data[i] >> 8));   // Send high byte of data
       Wire.write((int)(data[i] & 0xFF)); // Send low byte of data
     }
+
     Wire.endTransmission();
     delay(5); // Wait for EEPROM to write
 }
