@@ -23,11 +23,13 @@
 #define EEPROM2_ADDRESS 0x51 // Second EEPROM
 #define EEPROM_SIZE 65533    // 64KB = 65536 bytes shortened to prevent overwrite of log
 #define DATA_SIZE 2          // Number of analog inputs
-#define READ_INTERVAL 235    // 0.235 seconds (reduced to prevent drift from write delay)
+#define READ_INTERVAL_MS 250 // The desired time between sensor readings in milliseconds
 
 int currentAddress = 0; // Current address for both EEPROMs
 int logAddress = 65534; //location where data will be logged
 int counter = 0;
+
+unsigned long timeOfLastSensorRead;
 
 void setup() {
     Serial.begin(115200);
@@ -36,6 +38,9 @@ void setup() {
 }
 
 void loop() {
+    //Record millis right before the first sensor reading
+    timeOfLastSensorRead = millis();
+
     // Read analog values from A0, A1, A2, A3
     unsigned int data1[DATA_SIZE];
     unsigned int data2[DATA_SIZE];
@@ -70,13 +75,16 @@ void loop() {
         while (true); // Stop further execution
     }
 
-    // Delay for 0.235 seconds
-    delay(READ_INTERVAL);
-
     //iterate counter and reset at 63
     counter = (counter + 1) % 64;
     //Move to next address
     currentAddress += 4;
+
+    //Wait for READ_INTERVAL_MS time to pass before redoing the loop
+    while(millis() - timeOfLastSensorRead < READ_INTERVAL_MS)
+    {
+        //Do nothing...
+    }
 }
 
 void writeEEPROM(byte eepromAddress, unsigned int currentAddress, unsigned int* data) {
