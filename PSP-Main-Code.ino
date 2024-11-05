@@ -25,8 +25,8 @@
 #define DATA_SIZE 2          // Number of analog inputs
 #define READ_INTERVAL_MS 250 // The desired time between sensor readings in milliseconds
 
-int currentAddress = 0; // Current address for both EEPROMs
-int logAddress = 65534; //location where data will be logged
+unsigned int currentAddress = 0; // Current address for both EEPROMs
+unsigned int logAddress = 65534; //location where data will be logged
 int counter = 0;
 
 unsigned long timeOfLastSensorRead;
@@ -35,6 +35,16 @@ void setup() {
     Serial.begin(115200);
     Wire.begin(); // Start the I2C bus
     Wire.setClock(1000000); // Set I2C speed to 1 MHz
+    failCheck(logAddress, EEPROM1_ADDRESS);
+
+    if (currentAddress == 0) {
+      for (int initialDelay = 0; initialDelay > 0; initialDelay--) {
+        Serial.print("Waiting for ");
+        Serial.print(initialDelay);
+        Serial.println(" minutes");
+        delay(60000);
+      }
+    }
 }
 
 void loop() {
@@ -47,12 +57,6 @@ void loop() {
     for (int i = 0; i < DATA_SIZE; i++) {
         data1[i] = analogRead(A0 + i); //Log A0 and A1
         data2[i] = analogRead(A2 + i); //Log A2 and A3
-
-        //Verify data is within acceptable ranges
-        if (data1[i] < 0) data1[i] = 0;
-        if (data1[i] > 1023) data1[i] = 1023;
-        if (data2[i] < 0) data2[i] = 0;
-        if (data2[i] > 1023) data2[i] = 1023;
 
       //Adding last 6 bits as a counter
       data1[i] = (data1[i] & 0x3FF) | ((counter & 0x3F) << 10);
@@ -87,6 +91,17 @@ void loop() {
     }
 }
 
+void failCheck(unsigned int logAddress, byte eepromAddress) {
+    byte highLog  = readEEPROM(eepromAddress, logAddress);
+    byte lowLog  = readEEPROM(eepromAddress, logAddress + 1);
+
+  currentAddress = (highLog << 8) | lowLog;
+  return currentAddress;
+}
+
+
+
+
 void writeEEPROM(byte eepromAddress, unsigned int currentAddress, unsigned int* data) {
     Wire.beginTransmission(eepromAddress);
     Wire.write((int)(currentAddress >> 8));   // Send high byte
@@ -111,5 +126,4 @@ void writeBackup(int eepromAddress, int address, int logAddress) {
     Wire.write((int)(address & 0xFF)); // Send low byte
     Wire.endTransmission();
     delay(5); // Wait for EEPROM to write
-
 }
