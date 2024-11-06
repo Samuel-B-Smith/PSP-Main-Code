@@ -35,7 +35,7 @@ void setup() {
     Serial.begin(115200);
     Wire.begin(); // Start the I2C bus
     Wire.setClock(1000000); // Set I2C speed to 1 MHz
-    failCheck(logAddress, EEPROM1_ADDRESS);
+    currentAddress = failCheck(logAddress, EEPROM1_ADDRESS);
 
     if (currentAddress == 0) {
       for (int initialDelay = 0; initialDelay > 0; initialDelay--) {
@@ -44,6 +44,10 @@ void setup() {
         Serial.println(" minutes");
         delay(60000);
       }
+    }
+    else {
+      Serial.print("Code has already been started, resuming at ");
+      Serial.println(currentAddress);
     }
 }
 
@@ -91,7 +95,7 @@ void loop() {
     }
 }
 
-void failCheck(unsigned int logAddress, byte eepromAddress) {
+unsigned int failCheck(unsigned int logAddress, byte eepromAddress) {
     byte highLog  = readEEPROM(eepromAddress, logAddress);
     byte lowLog  = readEEPROM(eepromAddress, logAddress + 1);
 
@@ -99,7 +103,19 @@ void failCheck(unsigned int logAddress, byte eepromAddress) {
   return currentAddress;
 }
 
+byte readEEPROM(int eepromAddress, int address) {
+    Wire.beginTransmission(eepromAddress);
+    Wire.write((int)(address >> 8));   // Send high byte
+    Wire.write((int)(address & 0xFF)); // Send low byte
+    Wire.endTransmission();
 
+    Wire.requestFrom(eepromAddress, 1); // Request 1 byte
+    if (Wire.available()) {
+        return Wire.read(); // Read the value
+    }
+    Serial.println("Error");
+    return 0;
+}
 
 
 void writeEEPROM(byte eepromAddress, unsigned int currentAddress, unsigned int* data) {
