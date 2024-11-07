@@ -22,12 +22,13 @@
 #define EEPROM1_ADDRESS 0x50 // First EEPROM
 #define EEPROM2_ADDRESS 0x51 // Second EEPROM
 #define EEPROM_SIZE 65533    // 64KB = 65536 bytes shortened to prevent overwrite of log
-#define DATA_SIZE 2          // Number of analog inputs
+#define DATA_SIZE 4          // Number of analog inputs
 #define READ_INTERVAL_MS 250 // The desired time between sensor readings in milliseconds
 
 unsigned int currentAddress = 0; // Current address for both EEPROMs
-unsigned int logAddress = 65534; //location where data will be logged
+unsigned int logAddress = 65534; // Location where last address will be logged
 int counter = 0;
+unsigned int data[DATA_SIZE]; // Data array 
 
 unsigned long timeOfLastSensorRead;
 
@@ -58,24 +59,23 @@ void loop() {
     timeOfLastSensorRead = millis();
 
     // Read analog values from A0, A1, A2, A3
-    unsigned int data1[DATA_SIZE];
-    unsigned int data2[DATA_SIZE];
-    for (int i = 0; i < DATA_SIZE; i++) {
-        data1[i] = analogRead(A0 + i); //Log A0 and A1
-        data2[i] = analogRead(A2 + i); //Log A2 and A3
-
-      //Adding last 6 bits as a counter
-      data1[i] = (data1[i] & 0x3FF) | ((counter & 0x3F) << 10);
-      data2[i] = (data2[i] & 0x3FF) | ((counter & 0x3F) << 10);
-    }
 
 
+    data[1] = analogRead(A0); //Log A0
+    data[2] = analogRead(A1); //Log A1
+    data[3] = analogRead(A2); //Log A2
+    data[4] = analogRead(A3); //Log A3
+
+    //Adding last 6 bits as a counter
+    data[1] = (data[1] & 0x3FF) | ((counter & 0x3F) << 10);
+    data[2] = (data[2] & 0x3FF) | ((counter & 0x3F) << 10);
+    data[3] = (data[3] & 0x3FF) | ((counter & 0x3F) << 10);
+    data[4] = (data[4] & 0x3FF) | ((counter & 0x3F) << 10);
 
 
     // Write data to EEPROM
     if (currentAddress < EEPROM_SIZE) {
-        writeEEPROM(EEPROM1_ADDRESS, currentAddress, data1); //write A0 and A1 to EEPROM 1
-        writeEEPROM(EEPROM2_ADDRESS, currentAddress, data2); //write A2 and A3 to EEPROM 2
+        writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
 
         writeBackup(EEPROM1_ADDRESS, currentAddress, logAddress);
         currentAddress++;
@@ -97,6 +97,8 @@ void loop() {
     }
 }
 
+/////////////////////////////////////////////////////////////
+//Irrelevant after binary search
 unsigned int failCheck(unsigned int logAddress, byte eepromAddress) {
     byte highLog  = readEEPROM(eepromAddress, logAddress);
     byte lowLog  = readEEPROM(eepromAddress, logAddress + 1);
@@ -104,6 +106,7 @@ unsigned int failCheck(unsigned int logAddress, byte eepromAddress) {
   currentAddress = (highLog << 8) | lowLog;
   return currentAddress;
 }
+/////////////////////////////////////////////////////////////
 
 unsigned int binarySearch() {
   //Binary search here
@@ -125,20 +128,34 @@ byte readEEPROM(int eepromAddress, int address) {
 }
 
 
-void writeEEPROM(byte eepromAddress, unsigned int currentAddress, unsigned int* data) {
-    Wire.beginTransmission(eepromAddress);
+void writeEEPROM(byte eepromAddress1, byte eepromAddress2, unsigned int currentAddress, unsigned int* data) {
+    Wire.beginTransmission(eepromAddress1);
     Wire.write((int)(currentAddress >> 8));   // Send high byte
     Wire.write((int)(currentAddress & 0xFF)); // Send low byte
 
-    for (int i = 0; i < DATA_SIZE; i++) {
-      Wire.write((int)(data[i] >> 8));   // Send high byte of data
-      Wire.write((int)(data[i] & 0xFF)); // Send low byte of data
-    }
+    Wire.write((int)(data[1] >> 8));   // Send high byte of data 1
+    Wire.write((int)(data[1] & 0xFF)); // Send low byte of data 1
+    Wire.write((int)(data[2] >> 8));   // Send high byte of data 2
+    Wire.write((int)(data[2] & 0xFF)); // Send low byte of data 2
+
+    Wire.endTransmission();
+    delay(5); // Wait for EEPROM to write
+
+    //Write to EEPROM 2
+    Wire.beginTransmission(eepromAddress2);
+    Wire.write((int)(currentAddress >> 8));   // Send high byte
+    Wire.write((int)(currentAddress & 0xFF)); // Send low byte
+
+    Wire.write((int)(data[3] >> 8));   // Send high byte of data 3
+    Wire.write((int)(data[3] & 0xFF)); // Send low byte of data 3 
+    Wire.write((int)(data[4] >> 8));   // Send high byte of data 4
+    Wire.write((int)(data[4] & 0xFF)); // Send low byte of data 4
 
     Wire.endTransmission();
     delay(5); // Wait for EEPROM to write
 }
-
+//////////////////////////////////////////////////////////////////
+//Irrelevant after binary search
 void writeBackup(int eepromAddress, int address, int logAddress) {
     Wire.beginTransmission(eepromAddress);
     Wire.write((int)(logAddress >> 8));   // Send high byte
@@ -150,3 +167,4 @@ void writeBackup(int eepromAddress, int address, int logAddress) {
     Wire.endTransmission();
     delay(5); // Wait for EEPROM to write
 }
+//////////////////////////////////////////////////////////////////
