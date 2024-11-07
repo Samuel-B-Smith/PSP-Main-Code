@@ -37,6 +37,8 @@ void setup() {
     Wire.setClock(1000000); // Set I2C speed to 1 MHz
     currentAddress = failCheck(logAddress, EEPROM1_ADDRESS);
 
+    currentAddress = binarySearch(); //Add binary search here
+
     if (currentAddress == 0) {
       for (int initialDelay = 0; initialDelay > 0; initialDelay--) {
         Serial.print("Waiting for ");
@@ -100,6 +102,11 @@ unsigned int failCheck(unsigned int logAddress, byte eepromAddress) {
     byte lowLog  = readEEPROM(eepromAddress, logAddress + 1);
 
   currentAddress = (highLog << 8) | lowLog;
+  return currentAddress;
+}
+
+unsigned int binarySearch() {
+  //Binary search here
   return currentAddress;
 }
 
