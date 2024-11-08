@@ -5,6 +5,8 @@
  * Writes to chip 1's address 50 until filled before moving to chip 2 at address of 51
  * Stops writing data when both chips are full
  * Capable of losing power and continuing from where code was left at
+ *
+ * Target chip is ATMEGA328P (arduino pro mini)
  * 
  * Author(s):
  * Samuel Brice Smith
@@ -21,13 +23,13 @@
 
 #define EEPROM1_ADDRESS 0x50 // First EEPROM
 #define EEPROM2_ADDRESS 0x51 // Second EEPROM
-#define EEPROM_SIZE 65533    // 64KB = 65536 bytes shortened to prevent overwrite of log
+#define EEPROM_SIZE 65535    // 64KB = 65536 bytes
 #define DATA_SIZE 4          // Number of analog inputs
 #define READ_INTERVAL_MS 250 // The desired time between sensor readings in milliseconds
 
-unsigned int currentAddress = 0; // Current address for both EEPROMs
-unsigned int logAddress = 65534; // Location where last address will be logged
-int counter = 63;                // Counter initialized to 63. If a 63 is seen while reading out the data, reset occured.
+
+uint32_t currentAddress = 0; // Current address for both EEPROMs
+int counter = 0;
 unsigned int data[DATA_SIZE]; // Data array 
 
 unsigned long timeOfLastSensorRead;
@@ -36,11 +38,16 @@ void setup() {
     Serial.begin(115200);
     Wire.begin(); // Start the I2C bus
     Wire.setClock(1000000); // Set I2C speed to 1 MHz
-    currentAddress = failCheck(logAddress, EEPROM1_ADDRESS);
 
-    currentAddress = binarySearch(); //Add binary search here
+    currentAddress = getFirstCleanAddress();
 
-    if (currentAddress == 0) {
+    if(currentAddress > 0xFFFF) {
+        Serial.println("Stopping execution because there is nothing to do (out of EEPROM).");
+        while(true);
+    }
+
+    //Clean EEPROM situation
+    if (currentAddress == 0x0000) {
       for (int initialDelay = 0; initialDelay > 0; initialDelay--) {
         Serial.print("Waiting for ");
         Serial.print(initialDelay);
@@ -49,8 +56,8 @@ void setup() {
       }
     }
     else {
-      Serial.print("Code has already been started, resuming at ");
-      Serial.println(currentAddress);
+      Serial.print("Code has already been started, resuming at 0x");
+      Serial.println(currentAddress, HEX);
     }
 }
 
@@ -61,56 +68,75 @@ void loop() {
     // Read analog values from A0, A1, A2, A3
 
 
-    data[1] = analogRead(A0); //Log A0
-    data[2] = analogRead(A1); //Log A1
-    data[3] = analogRead(A2); //Log A2
-    data[4] = analogRead(A3); //Log A3
+    data[0] = analogRead(A0); //Log A0
+    data[1] = analogRead(A1); //Log A1
+    data[2] = analogRead(A2); //Log A2
+    data[3] = analogRead(A3); //Log A3
 
     //Adding last 6 bits as a counter
+    data[0] = (data[0] & 0x3FF) | ((counter & 0x3F) << 10);
     data[1] = (data[1] & 0x3FF) | ((counter & 0x3F) << 10);
     data[2] = (data[2] & 0x3FF) | ((counter & 0x3F) << 10);
     data[3] = (data[3] & 0x3FF) | ((counter & 0x3F) << 10);
-    data[4] = (data[4] & 0x3FF) | ((counter & 0x3F) << 10);
-
 
     // Write data to EEPROM
-    if (currentAddress < EEPROM_SIZE) {
+    if (currentAddress < (EEPROM_SIZE - (sizeof(data)/2))) {
         writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
 
-        writeBackup(EEPROM1_ADDRESS, currentAddress, logAddress);
-        currentAddress++;
-      } else {
+        currentAddress = currentAddress + 4;
+
+        Serial.print("New address is now 0x");
+        Serial.println(currentAddress, HEX);
+      } 
+      else {
         // Both EEPROMs are full, stop writing
         Serial.println("Both EEPROMs are full. Stopping data collection.");
         while (true); // Stop further execution
     }
 
-    //Count from 1 to 62 (inclusive).
-    counter = (counter % 62) + 1;
-    //Move to next address
-    currentAddress += 4;
+
+    //iterate counter and reset at 63
+    counter = (counter + 1) % 64;
+
 
     //Wait for READ_INTERVAL_MS time to pass before redoing the loop
-    while(millis() - timeOfLastSensorRead < READ_INTERVAL_MS)
-    {
+    while(millis() - timeOfLastSensorRead < READ_INTERVAL_MS) {
         //Do nothing...
     }
 }
 
-/////////////////////////////////////////////////////////////
-//Irrelevant after binary search
-unsigned int failCheck(unsigned int logAddress, byte eepromAddress) {
-    byte highLog  = readEEPROM(eepromAddress, logAddress);
-    byte lowLog  = readEEPROM(eepromAddress, logAddress + 1);
 
-  currentAddress = (highLog << 8) | lowLog;
-  return currentAddress;
-}
-/////////////////////////////////////////////////////////////
+uint32_t getFirstCleanAddress() {
+    //This function only checks the first byte in a grouping of 4 (ie addresses that are perfectly divisible by 4)
+    //because of the data encoding being used. This is why max is 16,383. The value is multiplied by 4 to get the address
+    //(meaning the last searched address is 16,383 * 4 = 65,532, the final address with 4 contiguous bytes available)
+    unsigned int low = 0;
+    unsigned mid;
+    unsigned int high = 16383;
 
-unsigned int binarySearch() {
-  //Binary search here
-  return currentAddress;
+    bool dataIsPresent;
+
+    while(low <= high) {
+        //Calculate the new midpoint
+        mid = (low + high) / 2;
+
+        dataIsPresent = readEEPROM(EEPROM1_ADDRESS, (mid*4)) != 0x00;
+
+        //If the value at the midpoint is not 0
+        if(dataIsPresent == true) {
+            low = mid + 1;
+        }
+        else if(low == mid) {
+            //Return the first blanked address (multiplied by 4 to give the true memory address)
+            return mid*4;
+        }
+        else {
+            high = mid;
+        }
+    }
+
+    Serial.println("There were no clean addresses found");
+    return 65536;
 }
 
 byte readEEPROM(int eepromAddress, int address) {
@@ -123,8 +149,8 @@ byte readEEPROM(int eepromAddress, int address) {
     if (Wire.available()) {
         return Wire.read(); // Read the value
     }
-    Serial.println("Error");
-    return 0;
+    Serial.println("Error reading EEPROM!");
+    return 0xFF;
 }
 
 
@@ -154,17 +180,3 @@ void writeEEPROM(byte eepromAddress1, byte eepromAddress2, unsigned int currentA
     Wire.endTransmission();
     delay(5); // Wait for EEPROM to write
 }
-//////////////////////////////////////////////////////////////////
-//Irrelevant after binary search
-void writeBackup(int eepromAddress, int address, int logAddress) {
-    Wire.beginTransmission(eepromAddress);
-    Wire.write((int)(logAddress >> 8));   // Send high byte
-    Wire.write((int)(logAddress & 0xFF)); // Send low byte
-
-    //Sending Last used address
-    Wire.write((int)(address >> 8));   // Send high byte
-    Wire.write((int)(address & 0xFF)); // Send low byte
-    Wire.endTransmission();
-    delay(5); // Wait for EEPROM to write
-}
-//////////////////////////////////////////////////////////////////
