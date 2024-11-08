@@ -55,7 +55,7 @@ void setup() {
       }
     }
     else {
-      Serial.print("Code has already been started, resuming at ");
+      Serial.print("Code has already been started, resuming at 0x");
       Serial.println(currentAddress, HEX);
     }
 }
