@@ -27,7 +27,7 @@
 #define DATA_SIZE 4          // Number of analog inputs
 #define READ_INTERVAL_MS 250 // The desired time between sensor readings in milliseconds
 
-unsigned uint32_t currentAddress = 0; // Current address for both EEPROMs
+uint32_t currentAddress = 0; // Current address for both EEPROMs
 int counter = 0;
 unsigned int data[DATA_SIZE]; // Data array 
 
@@ -79,7 +79,7 @@ void loop() {
     data[3] = (data[3] & 0x3FF) | ((counter & 0x3F) << 10);
 
     // Write data to EEPROM
-    if (currentAddress < (EEPROM_SIZE - sizeof(data)) {
+    if (currentAddress < (EEPROM_SIZE - sizeof(data))) {
         writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
 
         currentAddress = currentAddress + 4;
@@ -100,7 +100,7 @@ void loop() {
 }
 
 
-unsigned uint32_t getFirstCleanAddress() {
+uint32_t getFirstCleanAddress() {
     //This function only checks the first byte in a grouping of 4 (ie addresses that are perfectly divisible by 4)
     //because of the data encoding being used. This is why max is 16,383. The value is multiplied by 4 to get the address
     //(meaning the last searched address is 16,383 * 4 = 65,532, the final address with 4 contiguous bytes available)
