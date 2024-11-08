@@ -27,7 +27,7 @@
 #define DATA_SIZE 4          // Number of analog inputs
 #define READ_INTERVAL_MS 250 // The desired time between sensor readings in milliseconds
 
-unsigned int currentAddress = 0; // Current address for both EEPROMs
+unsigned uint32_t currentAddress = 0; // Current address for both EEPROMs
 int counter = 0;
 unsigned int data[DATA_SIZE]; // Data array 
 
@@ -67,24 +67,22 @@ void loop() {
     // Read analog values from A0, A1, A2, A3
 
 
-    data[1] = analogRead(A0); //Log A0
-    data[2] = analogRead(A1); //Log A1
-    data[3] = analogRead(A2); //Log A2
-    data[4] = analogRead(A3); //Log A3
+    data[0] = analogRead(A0); //Log A0
+    data[1] = analogRead(A1); //Log A1
+    data[2] = analogRead(A2); //Log A2
+    data[3] = analogRead(A3); //Log A3
 
     //Adding last 6 bits as a counter
+    data[0] = (data[0] & 0x3FF) | ((counter & 0x3F) << 10);
     data[1] = (data[1] & 0x3FF) | ((counter & 0x3F) << 10);
     data[2] = (data[2] & 0x3FF) | ((counter & 0x3F) << 10);
     data[3] = (data[3] & 0x3FF) | ((counter & 0x3F) << 10);
-    data[4] = (data[4] & 0x3FF) | ((counter & 0x3F) << 10);
-
 
     // Write data to EEPROM
-    if (currentAddress < EEPROM_SIZE) {
+    if (currentAddress < (EEPROM_SIZE - sizeof(data)) {
         writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
-
-        writeBackup(EEPROM1_ADDRESS, currentAddress, logAddress);
-        currentAddress++;
+		
+		currentAddress = currentAddress + 4;
       } 
 	  else {
 		// Both EEPROMs are full, stop writing
@@ -94,8 +92,6 @@ void loop() {
 
     //iterate counter and reset at 63
     counter = (counter + 1) % 64;
-    //Move to next address
-    currentAddress += 4;
 
     //Wait for READ_INTERVAL_MS time to pass before redoing the loop
     while(millis() - timeOfLastSensorRead < READ_INTERVAL_MS) {
