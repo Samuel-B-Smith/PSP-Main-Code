@@ -37,15 +37,15 @@ void setup() {
     Serial.begin(115200);
     Wire.begin(); // Start the I2C bus
     Wire.setClock(1000000); // Set I2C speed to 1 MHz
-	
-    currentAddress = getFirstCleanAddress();
-	
-	if(currentAddress > 0xFFFF) {
-		Serial.println("Stopping execution because there is nothing to do (out of EEPROM).");
-		while(true);
-	}
 
-	//Clean EEPROM situation
+    currentAddress = getFirstCleanAddress();
+
+    if(currentAddress > 0xFFFF) {
+        Serial.println("Stopping execution because there is nothing to do (out of EEPROM).");
+        while(true);
+    }
+
+    //Clean EEPROM situation
     if (currentAddress == 0x0000) {
       for (int initialDelay = 0; initialDelay > 0; initialDelay--) {
         Serial.print("Waiting for ");
@@ -81,11 +81,11 @@ void loop() {
     // Write data to EEPROM
     if (currentAddress < (EEPROM_SIZE - sizeof(data)) {
         writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
-		
-		currentAddress = currentAddress + 4;
+
+        currentAddress = currentAddress + 4;
       } 
-	  else {
-		// Both EEPROMs are full, stop writing
+      else {
+        // Both EEPROMs are full, stop writing
         Serial.println("Both EEPROMs are full. Stopping data collection.");
         while (true); // Stop further execution
     }
@@ -101,36 +101,36 @@ void loop() {
 
 
 unsigned uint32_t getFirstCleanAddress() {
-	//This function only checks the first byte in a grouping of 4 (ie addresses that are perfectly divisible by 4)
-	//because of the data encoding being used. This is why max is 16,383. The value is multiplied by 4 to get the address
-	//(meaning the last searched address is 16,383 * 4 = 65,532, the final address with 4 contiguous bytes available)
-	unsigned int low = 0;
-	unsigned mid;
-	unsigned int high = 16383;
-	
-	bool dataIsPresent;
-	
-	while(low <= high) {
-		//Calculate the new midpoint
-		mid = (low + high) / 2;
-		
-		dataIsPresent = readEEPROM(EEPROM1_ADDRESS, (mid*4)) != 0x00;
-		
-		//If the value at the midpoint is not 0
-		if(dataIsPresent == true) {
-			low = mid + 1;
-		}
-		else if(low == mid) {
-			//Return the first blanked address (multiplied by 4 to give the true memory address)
-			return mid*4;
-		}
-		else {
-			high = mid;
-		}
-	}
-	
-	Serial.println("There were no clean addresses found");
-	return 65536;
+    //This function only checks the first byte in a grouping of 4 (ie addresses that are perfectly divisible by 4)
+    //because of the data encoding being used. This is why max is 16,383. The value is multiplied by 4 to get the address
+    //(meaning the last searched address is 16,383 * 4 = 65,532, the final address with 4 contiguous bytes available)
+    unsigned int low = 0;
+    unsigned mid;
+    unsigned int high = 16383;
+
+    bool dataIsPresent;
+
+    while(low <= high) {
+        //Calculate the new midpoint
+        mid = (low + high) / 2;
+
+        dataIsPresent = readEEPROM(EEPROM1_ADDRESS, (mid*4)) != 0x00;
+
+        //If the value at the midpoint is not 0
+        if(dataIsPresent == true) {
+            low = mid + 1;
+        }
+        else if(low == mid) {
+            //Return the first blanked address (multiplied by 4 to give the true memory address)
+            return mid*4;
+        }
+        else {
+            high = mid;
+        }
+    }
+
+    Serial.println("There were no clean addresses found");
+    return 65536;
 }
 
 byte readEEPROM(int eepromAddress, int address) {
