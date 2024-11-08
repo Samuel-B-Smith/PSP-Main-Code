@@ -79,7 +79,7 @@ void loop() {
     data[3] = (data[3] & 0x3FF) | ((counter & 0x3F) << 10);
 
     // Write data to EEPROM
-    if (currentAddress < (EEPROM_SIZE - sizeof(data))) {
+    if (currentAddress < (EEPROM_SIZE - (sizeof(data)/2))) {
         writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
 
         currentAddress = currentAddress + 4;
