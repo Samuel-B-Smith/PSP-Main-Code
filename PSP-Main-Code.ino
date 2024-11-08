@@ -83,6 +83,9 @@ void loop() {
         writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
 
         currentAddress = currentAddress + 4;
+
+        Serial.print("New address is now 0x");
+        Serial.println(currentAddress, HEX);
       } 
       else {
         // Both EEPROMs are full, stop writing
