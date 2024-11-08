@@ -23,12 +23,11 @@
 
 #define EEPROM1_ADDRESS 0x50 // First EEPROM
 #define EEPROM2_ADDRESS 0x51 // Second EEPROM
-#define EEPROM_SIZE 65533    // 64KB = 65536 bytes shortened to prevent overwrite of log
+#define EEPROM_SIZE 65535    // 64KB = 65536 bytes
 #define DATA_SIZE 4          // Number of analog inputs
 #define READ_INTERVAL_MS 250 // The desired time between sensor readings in milliseconds
 
 unsigned int currentAddress = 0; // Current address for both EEPROMs
-unsigned int logAddress = 65534; // Location where last address will be logged
 int counter = 0;
 unsigned int data[DATA_SIZE]; // Data array 
 
