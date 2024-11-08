@@ -27,6 +27,7 @@
 #define DATA_SIZE 4          // Number of analog inputs
 #define READ_INTERVAL_MS 250 // The desired time between sensor readings in milliseconds
 
+
 uint32_t currentAddress = 0; // Current address for both EEPROMs
 int counter = 0;
 unsigned int data[DATA_SIZE]; // Data array 
@@ -79,7 +80,7 @@ void loop() {
     data[3] = (data[3] & 0x3FF) | ((counter & 0x3F) << 10);
 
     // Write data to EEPROM
-    if (currentAddress < (EEPROM_SIZE - sizeof(data))) {
+    if (currentAddress < (EEPROM_SIZE - (sizeof(data)/2))) {
         writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
 
         currentAddress = currentAddress + 4;
@@ -90,8 +91,10 @@ void loop() {
         while (true); // Stop further execution
     }
 
+
     //iterate counter and reset at 63
     counter = (counter + 1) % 64;
+
 
     //Wait for READ_INTERVAL_MS time to pass before redoing the loop
     while(millis() - timeOfLastSensorRead < READ_INTERVAL_MS) {
