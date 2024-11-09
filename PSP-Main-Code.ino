@@ -156,10 +156,10 @@ void writeEEPROM(byte eepromAddress1, byte eepromAddress2, unsigned int currentA
     Wire.write((int)(currentAddress >> 8));   // Send high byte
     Wire.write((int)(currentAddress & 0xFF)); // Send low byte
 
-    Wire.write((int)(data[1] >> 8));   // Send high byte of data 1
-    Wire.write((int)(data[1] & 0xFF)); // Send low byte of data 1
-    Wire.write((int)(data[2] >> 8));   // Send high byte of data 2
-    Wire.write((int)(data[2] & 0xFF)); // Send low byte of data 2
+    Wire.write((int)(data[0] >> 8));   // Send high byte of data 1
+    Wire.write((int)(data[0] & 0xFF)); // Send low byte of data 1
+    Wire.write((int)(data[1] >> 8));   // Send high byte of data 2
+    Wire.write((int)(data[1] & 0xFF)); // Send low byte of data 2
 
     Wire.endTransmission();
     delay(5); // Wait for EEPROM to write
@@ -169,10 +169,10 @@ void writeEEPROM(byte eepromAddress1, byte eepromAddress2, unsigned int currentA
     Wire.write((int)(currentAddress >> 8));   // Send high byte
     Wire.write((int)(currentAddress & 0xFF)); // Send low byte
 
-    Wire.write((int)(data[3] >> 8));   // Send high byte of data 3
-    Wire.write((int)(data[3] & 0xFF)); // Send low byte of data 3 
-    Wire.write((int)(data[4] >> 8));   // Send high byte of data 4
-    Wire.write((int)(data[4] & 0xFF)); // Send low byte of data 4
+    Wire.write((int)(data[2] >> 8));   // Send high byte of data 3
+    Wire.write((int)(data[2] & 0xFF)); // Send low byte of data 3 
+    Wire.write((int)(data[3] >> 8));   // Send high byte of data 4
+    Wire.write((int)(data[3] & 0xFF)); // Send low byte of data 4
 
     Wire.endTransmission();
     delay(5); // Wait for EEPROM to write
