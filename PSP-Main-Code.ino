@@ -10,7 +10,7 @@
  * 
  * Author(s):
  * Samuel Brice Smith
- * smit4344@purdue.ecu
+ * smit4344@purdue.edu
  * 
  * Electronics and Code assistance provided by:
  * Andrew Smith
@@ -48,7 +48,7 @@ void setup() {
 
     //Clean EEPROM situation
     if (currentAddress == 0x0000) {
-      for (int initialDelay = 0; initialDelay > 0; initialDelay--) {
+      for (int initialDelay = 30; initialDelay > 0; initialDelay--) {
         Serial.print("Waiting for ");
         Serial.print(initialDelay);
         Serial.println(" minutes");
