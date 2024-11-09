@@ -10,7 +10,7 @@
  * 
  * Author(s):
  * Samuel Brice Smith
- * smit4344@purdue.ecu
+ * smit4344@purdue.edu
  * 
  * Electronics and Code assistance provided by:
  * Andrew Smith
