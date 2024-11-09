@@ -29,7 +29,7 @@
 
 
 uint32_t currentAddress = 0; // Current address for both EEPROMs
-int counter = 0;
+int counter = 63;            // Counter initialized to 63. If a 63 is seen while reading out the data, reset occured.
 unsigned int data[DATA_SIZE]; // Data array 
 
 unsigned long timeOfLastSensorRead;
@@ -92,8 +92,8 @@ void loop() {
     }
 
 
-    //iterate counter and reset at 63
-    counter = (counter + 1) % 64;
+    //Count from 1 to 62 (inclusive).
+    counter = (counter % 62) + 1;
 
 
     //Wait for READ_INTERVAL_MS time to pass before redoing the loop
