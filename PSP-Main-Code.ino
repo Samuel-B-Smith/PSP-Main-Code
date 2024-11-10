@@ -1,16 +1,14 @@
 /* PSP Payload Prometheus Relaunch Mission Code
- * Verifies that chip is in write mode. If switch is not set to write, code does not continue
  * Gathers data from 4 Wheatstone Bridge chips on pins A0-A3 at a rate of 4 samples per second
  * Writes Data from Wheatstone bridges on to 2 seperate EEPROM Chips using A4 and A5 pins
- * Writes to chip 1's address 50 until filled before moving to chip 2 at address of 51
- * Stops writing data when both chips are full
- * Capable of losing power and continuing from where code was left at
+ * Splits data between EEPROMS before full, stopping when both EEPROMs are full
+ * Capable of losing power and continuing from where code was left at using binary search
  *
  * Target chip is ATMEGA328P (arduino pro mini)
  * 
  * Author(s):
  * Samuel Brice Smith
- * smit4344@purdue.ecu
+ * smit4344@purdue.edu
  * 
  * Electronics and Code assistance provided by:
  * Andrew Smith
@@ -29,12 +27,13 @@
 
 
 uint32_t currentAddress = 0; // Current address for both EEPROMs
-int counter = 0;
+int counter = 63;            // Counter initialized to 63. If a 63 is seen while reading out the data, reset occured.
 unsigned int data[DATA_SIZE]; // Data array 
 
 unsigned long timeOfLastSensorRead;
 
 void setup() {
+    Serial.print("started");
     Serial.begin(115200);
     Wire.begin(); // Start the I2C bus
     Wire.setClock(1000000); // Set I2C speed to 1 MHz
@@ -48,7 +47,7 @@ void setup() {
 
     //Clean EEPROM situation
     if (currentAddress == 0x0000) {
-      for (int initialDelay = 0; initialDelay > 0; initialDelay--) {
+      for (int initialDelay = 10; initialDelay > 0; initialDelay--) {
         Serial.print("Waiting for ");
         Serial.print(initialDelay);
         Serial.println(" minutes");
@@ -84,19 +83,16 @@ void loop() {
         writeEEPROM(EEPROM1_ADDRESS,EEPROM2_ADDRESS, currentAddress, data); //write A0 and A1 to EEPROM 1
 
         currentAddress = currentAddress + 4;
-
-        Serial.print("New address is now 0x");
-        Serial.println(currentAddress, HEX);
-      } 
-      else {
+    } 
+    else {
         // Both EEPROMs are full, stop writing
         Serial.println("Both EEPROMs are full. Stopping data collection.");
         while (true); // Stop further execution
     }
 
 
-    //iterate counter and reset at 63
-    counter = (counter + 1) % 64;
+    //Count from 1 to 62 (inclusive).
+    counter = (counter % 62) + 1;
 
 
     //Wait for READ_INTERVAL_MS time to pass before redoing the loop
